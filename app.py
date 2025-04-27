@@ -108,7 +108,7 @@ if "preview_ready" not in st.session_state:
     st.session_state.preview_ready = False
 
 # === App UI ===
-st.title("🪪 ID Card Duplicator & Print Generator")
+st.title("🪪 ID Card Format editor")
 
 # === Upload ===
 if not st.session_state.image_uploaded:
