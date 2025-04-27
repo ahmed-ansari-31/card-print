@@ -112,7 +112,7 @@ st.title("🪪 ID Card Duplicator & Print Generator")
 
 # === Upload ===
 if not st.session_state.image_uploaded:
-    uploaded_file1 = st.file_uploader("Upload an ID card image", type=["jpg", "jpeg", "png"])
+    uploaded_file1 = st.file_uploader("Upload an ID card image.", type=["jpg", "jpeg", "png"])
     if uploaded_file1:
         st.session_state.original_image = Image.open(uploaded_file1).convert("RGB")
         st.session_state.image_uploaded = True
