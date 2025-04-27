@@ -17,9 +17,7 @@ PAGE_WIDTH, PAGE_HEIGHT = A4
 PREVIEW_WIDTH = 600
 
 log_dir = "logs"
-output_dir = "output"
 os.makedirs(log_dir, exist_ok=True)
-os.makedirs(output_dir, exist_ok=True)
 
 logging.basicConfig(
     filename=os.path.join(log_dir, "app.log"),
@@ -54,7 +52,7 @@ def enhance_image(img, brightness=1.0, contrast=1.0, sharpness=1.0, grayscale=Fa
 def resize_image(img):
     return img.resize((int(CARD_WIDTH_INCH * 300), int(CARD_HEIGHT_INCH * 300)))  # 300 DPI
 
-def create_pdf(img, filename=None):
+def create_pdf(img):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     card_width = CARD_WIDTH_INCH * inch
@@ -82,15 +80,9 @@ def create_pdf(img, filename=None):
     c.save()
     buffer.seek(0)
 
-    if filename:
-        save_path = os.path.join(output_dir, filename)
-        with open(save_path, "wb") as f:
-            f.write(buffer.getbuffer())
-        logging.info(f"PDF saved: {save_path}")
-
     return buffer, preview
 
-def create_word(img, filename=None):
+def create_word(img):
     doc = Document()
     for _ in range(4):
         table = doc.add_table(rows=1, cols=2)
@@ -105,14 +97,8 @@ def create_word(img, filename=None):
     doc.add_page_break()
     word_io = BytesIO()
     doc.save(word_io)
-
-    if filename:
-        save_path = os.path.join(output_dir, filename)
-        with open(save_path, "wb") as f:
-            f.write(word_io.getbuffer())
-        logging.info(f"Word saved: {save_path}")
-
     word_io.seek(0)
+
     return word_io
 
 # === Session state ===
@@ -136,9 +122,9 @@ if not st.session_state.image_uploaded:
 if st.session_state.image_uploaded:
     st.subheader("🎛 Real-Time Image Editor (Single Card)")
     grayscale = st.toggle("Grayscale")
-    brightness = st.slider("Brightness", 0.5, 2.0, 1.0, 0.05)
-    contrast = st.slider("Contrast", 0.5, 2.0, 1.0, 0.05)
-    sharpness = st.slider("Sharpness", 0.5, 2.0, 1.0, 0.05)
+    brightness = st.slider("Brightness", 0.1, 5.0, 1.0, 0.05)
+    contrast = st.slider("Contrast", 0.1, 5.0, 1.0, 0.05)
+    sharpness = st.slider("Sharpness", 0.1, 5.0, 1.0, 0.05)
 
     edited_preview = enhance_image(
         st.session_state.original_image,
@@ -153,8 +139,8 @@ if st.session_state.image_uploaded:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         resized_img = resize_image(edited_preview)
 
-        pdf_buf, layout_preview = create_pdf(resized_img, f"id_cards_{timestamp}.pdf")
-        word_buf = create_word(resized_img, f"id_cards_{timestamp}.docx")
+        pdf_buf, layout_preview = create_pdf(resized_img)
+        word_buf = create_word(resized_img)
 
         st.session_state.preview_ready = True
         st.session_state.preview_img = layout_preview
@@ -164,13 +150,13 @@ if st.session_state.image_uploaded:
 # === Final layout preview + download ===
 if st.session_state.get("preview_ready", False):
     st.subheader("🖼 Final Layout (8 cards on A4)")
-    st.image(st.session_state.preview_img, use_column_width=True)
+    st.image(st.session_state.preview_img, use_container_width =True)
 
     st.download_button("📄 Download PDF", data=st.session_state.pdf_data, file_name="ID_Cards.pdf", mime="application/pdf")
     st.download_button("📝 Download Word", data=st.session_state.word_data, file_name="ID_Cards.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
-    if st.button("🖨 Print from Browser"):
-        st.markdown('<script>window.print()</script>', unsafe_allow_html=True)
+    # if st.button("🖨 Print from Browser"):
+    #     st.markdown('<script>window.print()</script>', unsafe_allow_html=True)
 
     if st.button("🔁 Reset"):
         st.session_state.clear()  # Clear all session state
