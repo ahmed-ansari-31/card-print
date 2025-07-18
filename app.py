@@ -1,163 +1,45 @@
 import streamlit as st
-from PIL import Image, ImageEnhance, ImageOps
-from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
-from docx import Document
-from docx.shared import Inches
+import yaml
 import os
-import logging
-from datetime import datetime
+from components import id_to_a4, id_front_back, id_center, multi_id_center
 
-# === Setup ===
-CARD_WIDTH_INCH = 3.375
-CARD_HEIGHT_INCH = 2.125
-PAGE_WIDTH, PAGE_HEIGHT = A4
-PREVIEW_WIDTH = 600
+# Load config
+with open('config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
 
-log_dir = "logs"
-os.makedirs(log_dir, exist_ok=True)
+# Sidebar: Help, Settings, Reset
+st.sidebar.title("🛠️ Settings & Help")
+st.sidebar.markdown("**DPI (Print Quality):**")
+dpi = st.sidebar.slider("DPI", 72, 600, 300, 10, key="dpi_global")
+st.sidebar.markdown("---")
+st.sidebar.markdown("**About:**\nThis app helps you print ID cards, documents, and photos in custom layouts, with cropping, enhancement, and batch support.\n\n**Tips:**\n- Use the crop sliders to trim your image.\n- Adjust brightness/contrast for best print results.\n- Choose the right page and document size for your needs.\n- Download as PDF or Word for easy printing.")
+if st.sidebar.button("🔁 Reset All"):
+    st.session_state.clear()
+    st.rerun()
 
-logging.basicConfig(
-    filename=os.path.join(log_dir, "app.log"),
-    filemode='a',
-    format="%(asctime)s [%(levelname)s]: %(message)s",
-    level=logging.INFO
-)
+# Pass global settings to config/session
+config['dpi'] = dpi
 
-# === Functions ===
-def enhance_image(img, brightness=1.0, contrast=1.0, sharpness=1.0, grayscale=False,
-                  rotate_angle=0, crop_values=(0, 0, 0, 0)):
-    img = img.convert("RGB")
-    if grayscale:
-        img = ImageOps.grayscale(img).convert("RGB")
-    img = img.rotate(rotate_angle, expand=True)
+st.title("🪪 Card Printing Suite")
 
-    width, height = img.size
-    left_crop, top_crop, right_crop, bottom_crop = crop_values
-    img = img.crop((
-        left_crop,
-        top_crop,
-        width - right_crop,
-        height - bottom_crop
-    ))
+# Tabs for each feature
+TABS = [
+    "ID to A4 (8 per page)",
+    "ID to A4 (Front & Back)",
+    "Single ID Centered",
+    "Multiple IDs Centered"
+]
+tab1, tab2, tab3, tab4 = st.tabs(TABS)
 
-    img = ImageEnhance.Brightness(img).enhance(brightness)
-    img = ImageEnhance.Contrast(img).enhance(contrast)
-    img = ImageEnhance.Sharpness(img).enhance(sharpness)
-    return img
-
-
-def resize_image(img):
-    return img.resize((int(CARD_WIDTH_INCH * 300), int(CARD_HEIGHT_INCH * 300)))  # 300 DPI
-
-def create_pdf(img):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    card_width = CARD_WIDTH_INCH * inch
-    card_height = CARD_HEIGHT_INCH * inch
-
-    columns, rows = 2, 4
-    h_spacing, v_spacing = 0.25 * inch, 0.25 * inch
-
-    total_width = columns * card_width + (columns - 1) * h_spacing
-    total_height = rows * card_height + (rows - 1) * v_spacing
-
-    left_margin = (PAGE_WIDTH - total_width) / 2
-    bottom_margin = (PAGE_HEIGHT - total_height) / 2
-
-    x_positions = [left_margin + col * (card_width + h_spacing) for col in range(columns)]
-    y_positions = [bottom_margin + row * (card_height + v_spacing) for row in reversed(range(rows))]
-
-    preview = Image.new("RGB", (int(PAGE_WIDTH), int(PAGE_HEIGHT)), "white")
-    for y in y_positions:
-        for x in x_positions:
-            c.drawInlineImage(img, x, y, width=card_width, height=card_height)
-            preview.paste(img.resize((int(card_width), int(card_height))), (int(x), int(PAGE_HEIGHT - y - card_height)))
-
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-
-    return buffer, preview
-
-def create_word(img):
-    doc = Document()
-    for _ in range(4):
-        table = doc.add_table(rows=1, cols=2)
-        row_cells = table.rows[0].cells
-        for cell in row_cells:
-            paragraph = cell.paragraphs[0]
-            run = paragraph.add_run()
-            image_io = BytesIO()
-            img.save(image_io, format='PNG')
-            image_io.seek(0)
-            run.add_picture(image_io, width=Inches(CARD_WIDTH_INCH), height=Inches(CARD_HEIGHT_INCH))
-    doc.add_page_break()
-    word_io = BytesIO()
-    doc.save(word_io)
-    word_io.seek(0)
-
-    return word_io
-
-# === Session state ===
-if "image_uploaded" not in st.session_state:
-    st.session_state.image_uploaded = False
-if "preview_ready" not in st.session_state:
-    st.session_state.preview_ready = False
-
-# === App UI ===
-st.title("🪪 ID Card Format editor")
-
-# === Upload ===
-if not st.session_state.image_uploaded:
-    uploaded_file1 = st.file_uploader("Upload an ID card image.", type=["jpg", "jpeg", "png"])
-    if uploaded_file1:
-        st.session_state.original_image = Image.open(uploaded_file1).convert("RGB")
-        st.session_state.image_uploaded = True
-        st.success("✅ Image uploaded. You can now edit it below.")
-
-# === Real-time editor ===
-if st.session_state.image_uploaded:
-    st.subheader("🎛 Real-Time Image Editor (Single Card)")
-    grayscale = st.toggle("Grayscale")
-    brightness = st.slider("Brightness", 0.1, 5.0, 1.0, 0.05)
-    contrast = st.slider("Contrast", 0.1, 5.0, 1.0, 0.05)
-    sharpness = st.slider("Sharpness", 0.1, 5.0, 1.0, 0.05)
-
-    edited_preview = enhance_image(
-        st.session_state.original_image,
-        brightness,
-        contrast,
-        sharpness,
-        grayscale
-    )
-    st.image(edited_preview, caption="🔍 Single Card Preview", width=PREVIEW_WIDTH)
-
-    if st.button("🧱 Apply to Layout & Generate PDF/Word"):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        resized_img = resize_image(edited_preview)
-
-        pdf_buf, layout_preview = create_pdf(resized_img)
-        word_buf = create_word(resized_img)
-
-        st.session_state.preview_ready = True
-        st.session_state.preview_img = layout_preview
-        st.session_state.pdf_data = pdf_buf
-        st.session_state.word_data = word_buf
-
-# === Final layout preview + download ===
-if st.session_state.get("preview_ready", False):
-    st.subheader("🖼 Final Layout (8 cards on A4)")
-    st.image(st.session_state.preview_img, use_container_width =True)
-
-    st.download_button("📄 Download PDF", data=st.session_state.pdf_data, file_name="ID_Cards.pdf", mime="application/pdf")
-    st.download_button("📝 Download Word", data=st.session_state.word_data, file_name="ID_Cards.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
-    # if st.button("🖨 Print from Browser"):
-    #     st.markdown('<script>window.print()</script>', unsafe_allow_html=True)
-
-    if st.button("🔁 Reset"):
-        st.session_state.clear()  # Clear all session state
-        st.rerun() 
+with tab1:
+    st.markdown("Easily print 8 documents per page. [Tip: Use crop and enhancement for best results!]")
+    id_to_a4.render(st, config)
+with tab2:
+    st.markdown("Print front and back of a document on a single page.")
+    id_front_back.render(st, config)
+with tab3:
+    st.markdown("Print a single document centered on the page.")
+    id_center.render(st, config)
+with tab4:
+    st.markdown("Print up to 4 documents, spaced and centered.")
+    multi_id_center.render(st, config) 

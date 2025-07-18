@@ -1,0 +1,30 @@
+page_sizes:
+  a4:
+    width_inch: 8.27
+    height_inch: 11.69
+  letter:
+    width_inch: 8.5
+    height_inch: 11.0
+  4x6:
+    width_inch: 4.0
+    height_inch: 6.0
+  5x6:
+    width_inch: 5.0
+    height_inch: 6.0
+  full_document:
+    width_inch: 8.27
+    height_inch: 11.69
+
+document_sizes:
+  id_card:
+    width_inch: 3.375
+    height_inch: 2.125
+  passport:
+    width_inch: 4.921
+    height_inch: 3.465
+  cnic:
+    width_inch: 3.35
+    height_inch: 2.11
+  passport_photo:
+    width_inch: 1.38
+    height_inch: 1.77 
