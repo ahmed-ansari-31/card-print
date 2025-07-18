@@ -104,7 +104,7 @@ def render(st, config):
         st.subheader("🖼 Final Layout (Document Centered on Page)")
         preview_img = st.session_state.preview_img_center.copy()
         preview_img.thumbnail((PREVIEW_WIDTH, PREVIEW_WIDTH))
-        st.image(preview_img, use_column_width=True)
+        st.image(preview_img, use_container_width=True)
         st.download_button("📄 Download PDF", data=st.session_state.pdf_data_center, file_name="Document_Centered.pdf", mime="application/pdf")
         st.download_button("📝 Download Word", data=st.session_state.word_data_center, file_name="Document_Centered.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         if st.button("🔁 Reset Center"):

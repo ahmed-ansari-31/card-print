@@ -140,7 +140,7 @@ def render(st, config):
         st.subheader(f"🖼 Final Layout ({columns*rows} documents on page)")
         preview_img = st.session_state.preview_img.copy()
         preview_img.thumbnail((PREVIEW_WIDTH, PREVIEW_WIDTH))
-        st.image(preview_img, use_column_width=True)
+        st.image(preview_img, use_container_width=True)
         st.download_button("📄 Download PDF", data=st.session_state.pdf_data, file_name="Documents.pdf", mime="application/pdf")
         st.download_button("📝 Download Word", data=st.session_state.word_data, file_name="Documents.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         if st.button("🔁 Reset"):
