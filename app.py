@@ -1,7 +1,7 @@
 import streamlit as st
 import yaml
 import os
-from components import id_to_a4, id_front_back, id_center, multi_id_center
+from components import id_to_a4, id_front_back, id_center, multi_id_center, pdf_merger, image_to_pdf
 
 # Load config
 with open('config.yaml', 'r') as f:
@@ -27,9 +27,11 @@ TABS = [
     "ID to A4 (8 per page)",
     "ID to A4 (Front & Back)",
     "Single ID Centered",
-    "Multiple IDs Centered"
+    "Multiple IDs Centered",
+    "PDF merger",
+    "Image to PDF"
 ]
-tab1, tab2, tab3, tab4 = st.tabs(TABS)
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TABS)
 
 with tab1:
     st.markdown("Easily print 8 documents per page. [Tip: Use crop and enhancement for best results!]")
@@ -43,3 +45,9 @@ with tab3:
 with tab4:
     st.markdown("Print up to 4 documents, spaced and centered.")
     multi_id_center.render(st, config) 
+with tab5:
+    st.markdown("Merge multiple PDF files into a single PDF.")
+    pdf_merger.render(st, config)
+with tab6:
+    st.markdown("Convert images to PDF.")
+    image_to_pdf.render(st, config)
