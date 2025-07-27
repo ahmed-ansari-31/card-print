@@ -1,31 +1,7 @@
 import streamlit as st
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter, Transformation
+from PyPDF2 import PdfMerger, PdfReader
 from io import BytesIO
 import tempfile
-from reportlab.lib.pagesizes import A4
-
-# Helper to resize a PDF page to A4 using PyPDF2 transformations
-def resize_pdf_to_a4(input_pdf_bytes):
-    output = BytesIO()
-    reader = PdfReader(BytesIO(input_pdf_bytes))
-    writer = PdfWriter()
-    a4_width, a4_height = A4  # points
-    for page in reader.pages:
-        orig_width = float(page.mediabox.width)
-        orig_height = float(page.mediabox.height)
-        scale_x = a4_width / orig_width
-        scale_y = a4_height / orig_height
-        scale = min(scale_x, scale_y)
-        tx = (a4_width - orig_width * scale) / 2
-        ty = (a4_height - orig_height * scale) / 2
-        # Create a blank A4 page
-        new_page = writer.add_blank_page(width=a4_width, height=a4_height)
-        # Transform the original page to fit A4
-        page.add_transformation(Transformation().scale(scale, scale).translate(tx, ty))
-        new_page.merge_page(page)
-    writer.write(output)
-    output.seek(0)
-    return output
 
 def render(st, config):
     st.header("PDF Tools")
@@ -34,15 +10,10 @@ def render(st, config):
     with tab1:
         st.subheader("Merge Multiple PDFs")
         pdf_files = st.file_uploader("Upload PDF files to merge", type="pdf", accept_multiple_files=True)
-        page_size = st.selectbox("Select output page size", ["A4 (8.27 x 11.69 in)", "Original"], index=0)
         if st.button("Merge PDFs") and pdf_files:
             merger = PdfMerger()
             for pdf in pdf_files:
-                pdf_bytes = pdf.read()
-                if page_size.startswith("A4"):
-                    # Resize each PDF to A4
-                    pdf_bytes = resize_pdf_to_a4(pdf_bytes).getvalue()
-                merger.append(BytesIO(pdf_bytes))
+                merger.append(BytesIO(pdf.read()))
             merged_pdf = BytesIO()
             merger.write(merged_pdf)
             merger.close()
