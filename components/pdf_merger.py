@@ -1,28 +1,28 @@
 import streamlit as st
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter
+from PyPDF2 import PdfMerger, PdfReader, PdfWriter, Transformation
 from io import BytesIO
 import tempfile
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from PyPDF2.generic import RectangleObject
 
-# Helper to resize a PDF page to A4 using reportlab
+# Helper to resize a PDF page to A4 using PyPDF2 transformations
 def resize_pdf_to_a4(input_pdf_bytes):
     output = BytesIO()
     reader = PdfReader(BytesIO(input_pdf_bytes))
     writer = PdfWriter()
+    a4_width, a4_height = A4  # points
     for page in reader.pages:
-        packet = BytesIO()
-        can = canvas.Canvas(packet, pagesize=A4)
-        # Draw the original PDF page as an image (not perfect, but works for most cases)
-        # This is a placeholder: ideally, use pdf2image or similar for perfect fidelity
-        can.save()
-        packet.seek(0)
-        new_pdf = PdfReader(packet)
-        new_page = new_pdf.pages[0]
-        # Overlay the original content
+        orig_width = float(page.mediabox.width)
+        orig_height = float(page.mediabox.height)
+        scale_x = a4_width / orig_width
+        scale_y = a4_height / orig_height
+        scale = min(scale_x, scale_y)
+        tx = (a4_width - orig_width * scale) / 2
+        ty = (a4_height - orig_height * scale) / 2
+        # Create a blank A4 page
+        new_page = writer.add_blank_page(width=a4_width, height=a4_height)
+        # Transform the original page to fit A4
+        page.add_transformation(Transformation().scale(scale, scale).translate(tx, ty))
         new_page.merge_page(page)
-        writer.add_page(new_page)
     writer.write(output)
     output.seek(0)
     return output
